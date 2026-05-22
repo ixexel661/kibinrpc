@@ -1,4 +1,4 @@
-import { createKibinClient } from '@kibin/client';
+import { createKibinClient } from '@kibinrpc/client';
 import type { AppRouter } from '../server/router.js';
 
 export const client = createKibinClient<AppRouter>({

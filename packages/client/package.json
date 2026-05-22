@@ -1,5 +1,5 @@
 {
-	"name": "@kibin/client",
+	"name": "@kibinrpc/client",
 	"version": "0.0.2",
 	"description": "Type-safe and developer-friendly RPC client with end-to-end type inference",
 	"license": "MIT",

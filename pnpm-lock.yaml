@@ -29,7 +29,7 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.3
         version: 2.0.3(hono@4.12.22)
-      '@kibin/server':
+      '@kibinrpc/server':
         specifier: workspace:*
         version: link:../../packages/server
       hono:
@@ -45,7 +45,7 @@ importers:
       '@app/backend':
         specifier: workspace:*
         version: link:../backend
-      '@kibin/client':
+      '@kibinrpc/client':
         specifier: workspace:*
         version: link:../../packages/client
       react:
@@ -70,10 +70,10 @@ importers:
 
   examples/node:
     dependencies:
-      '@kibin/client':
+      '@kibinrpc/client':
         specifier: workspace:*
         version: link:../../packages/client
-      '@kibin/server':
+      '@kibinrpc/server':
         specifier: workspace:*
         version: link:../../packages/server
     devDependencies:

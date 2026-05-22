@@ -1,4 +1,4 @@
-import { defineActions, KibinError, ServerAction } from '@kibin/server';
+import { defineActions, KibinError, ServerAction } from '@kibinrpc/server';
 
 export interface User {
 	id: string;

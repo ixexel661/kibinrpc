@@ -1,4 +1,4 @@
-import { createRouter } from '@kibin/server';
+import { createRouter } from '@kibinrpc/server';
 import { UserActions } from './actions.js';
 
 export const router = createRouter({

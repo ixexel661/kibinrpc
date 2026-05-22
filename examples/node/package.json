@@ -6,8 +6,8 @@
 		"dev": "tsx src/index.ts"
 	},
 	"dependencies": {
-		"@kibin/client": "workspace:*",
-		"@kibin/server": "workspace:*"
+		"@kibinrpc/client": "workspace:*",
+		"@kibinrpc/server": "workspace:*"
 	},
 	"devDependencies": {
 		"tsx": "^4.22.3",

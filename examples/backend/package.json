@@ -11,7 +11,7 @@
 	},
 	"dependencies": {
 		"@hono/node-server": "^2.0.3",
-		"@kibin/server": "workspace:*",
+		"@kibinrpc/server": "workspace:*",
 		"hono": "^4.12.22"
 	},
 	"devDependencies": {

@@ -1,4 +1,4 @@
-import { ServerAction } from '@kibin/server';
+import { ServerAction } from '@kibinrpc/server';
 
 export interface User {
 	id: string;

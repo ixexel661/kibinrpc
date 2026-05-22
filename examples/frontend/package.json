@@ -9,7 +9,7 @@
 	},
 	"dependencies": {
 		"@app/backend": "workspace:*",
-		"@kibin/client": "workspace:*",
+		"@kibinrpc/client": "workspace:*",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"
 	},
