@@ -13,7 +13,7 @@
 		"check:fix": "biome check --write",
 		"lint": "biome lint",
 		"format": "biome format",
-		"release:bump": "bumpp --recursive",
+		"release:bump": "bumpp packages/*/package.json --no-push",
 		"release": "pnpm run release:bump && pnpm run build && pnpm --filter './packages/*' publish"
 	},
 	"devDependencies": {
