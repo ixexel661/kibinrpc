@@ -12,7 +12,15 @@ export type KibinClient<Router> = {
 	[K in keyof ExtractServices<Router>]: ServiceClient<ExtractServices<Router>[K]>;
 };
 
+export interface RetryConfig {
+	/** Total number of attempts. Default: 3 */
+	attempts?: number;
+	/** Base delay in ms — doubles each retry (exponential backoff). Default: 300 */
+	delay?: number;
+}
+
 export interface KibinClientConfig {
 	baseUrl: string;
 	headers?: Record<string, string>;
+	retry?: RetryConfig;
 }

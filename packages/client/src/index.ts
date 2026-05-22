@@ -1,3 +1,3 @@
 export { createKibinClient } from './client.js';
 export { isKibinError, KibinError } from './errors.js';
-export type { KibinClient, KibinClientConfig } from './types.js';
+export type { KibinClient, KibinClientConfig, RetryConfig } from './types.js';
