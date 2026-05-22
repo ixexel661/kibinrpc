@@ -9,8 +9,12 @@ export default function App() {
 	const [posts, setPosts] = useState<Post[]>([]);
 
 	useEffect(() => {
-		client.user.listUsers().then(setUsers);
-		client.post.listPosts().then(setPosts);
+		client
+			.$batch([() => client.user.listUsers(), () => client.post.listPosts()])
+			.then(([users, posts]) => {
+				setUsers(users);
+				setPosts(posts);
+			});
 	}, []);
 
 	async function handleCreateUser(e: React.FormEvent<HTMLFormElement>) {
