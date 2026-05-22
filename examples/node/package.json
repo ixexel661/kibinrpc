@@ -1,0 +1,16 @@
+{
+	"name": "@examples/node",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx src/index.ts"
+	},
+	"dependencies": {
+		"@kibin/client": "workspace:*",
+		"@kibin/server": "workspace:*"
+	},
+	"devDependencies": {
+		"tsx": "^4.22.3",
+		"@types/node": "25.9.1"
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"name": "kibin",
+	"private": true,
+	"type": "module",
+	"version": "0.0.1",
+	"scripts": {
+		"build": "pnpm -r run build",
+		"dev": "pnpm -r --parallel run dev",
+		"example:node": "pnpm --filter @examples/node dev",
+		"example:backend": "pnpm --filter @app/backend dev",
+		"example:frontend": "pnpm --filter @app/frontend dev",
+		"check": "biome check",
+		"check:fix": "biome check --write",
+		"lint": "biome lint",
+		"format": "biome format",
+		"release:bump": "bumpp --recursive",
+		"release": "pnpm run release:bump && pnpm run build && pnpm --filter './packages/*' publish"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.15",
+		"bumpp": "^11.1.0",
+		"lefthook": "^2.1.8",
+		"tsdown": "^0.22.0",
+		"typescript": "^6.0.3"
+	},
+	"packageManager": "pnpm@11.2.2"
+}

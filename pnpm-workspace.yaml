@@ -1,0 +1,11 @@
+packages:
+  - "packages/*"
+  - "examples/*"
+  - "apps/*"
+
+allowBuilds:
+  esbuild: true
+  lefthook: true
+
+minimumReleaseAgeExclude:
+  - hono@4.12.22

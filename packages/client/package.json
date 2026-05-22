@@ -1,0 +1,31 @@
+{
+	"name": "@kibin/client",
+	"version": "0.0.1",
+	"description": "Type-safe RPC client with end-to-end type inference",
+	"license": "MIT",
+	"author": "ixexel661",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ixexel661/kibin",
+		"directory": "packages/client"
+	},
+	"keywords": ["rpc", "client", "typescript", "fetch"],
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": ["dist"],
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

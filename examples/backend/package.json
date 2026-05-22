@@ -1,0 +1,20 @@
+{
+	"name": "@app/backend",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./router": "./src/router.ts"
+	},
+	"scripts": {
+		"dev": "tsx src/index.ts"
+	},
+	"dependencies": {
+		"@hono/node-server": "^2.0.3",
+		"@kibin/server": "workspace:*",
+		"hono": "^4.12.22"
+	},
+	"devDependencies": {
+		"tsx": "^4.22.3"
+	}
+}
