@@ -1,5 +1,5 @@
 import { KibinError } from './errors.js';
-import type { KibinClient, KibinClientConfig } from './types.js';
+import type { KibinClient, KibinClientConfig, RequestCtx } from './types.js';
 
 const RETRY_DEFAULTS = { attempts: 3, delay: 300 };
 
@@ -8,8 +8,15 @@ type RpcResult = { data?: unknown; error?: { code?: string; message?: string } }
 export function createKibinClient<Router>(config: KibinClientConfig): KibinClient<Router> {
 	const maxAttempts = config.retry?.attempts ?? RETRY_DEFAULTS.attempts;
 	const baseDelay = config.retry?.delay ?? RETRY_DEFAULTS.delay;
+	const { interceptors } = config;
 
 	async function rpcCall(namespace: string, method: string, args: unknown[]): Promise<unknown> {
+		let ctx: RequestCtx = { namespace, method, args };
+
+		if (interceptors?.request) {
+			ctx = await interceptors.request(ctx);
+		}
+
 		let lastError: unknown;
 
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -21,7 +28,7 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 				const response = await fetch(config.baseUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json', ...config.headers },
-					body: JSON.stringify({ namespace, method, args }),
+					body: JSON.stringify(ctx),
 				});
 
 				const result = (await response.json()) as RpcResult;
@@ -35,7 +42,14 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 						lastError = err;
 						continue;
 					}
+					if (interceptors?.error) {
+						return await interceptors.error({ ...ctx, error: err });
+					}
 					throw err;
+				}
+
+				if (interceptors?.response) {
+					return await interceptors.response({ ...ctx, data: result.data });
 				}
 
 				return result.data;
@@ -43,6 +57,10 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 				if (err instanceof KibinError) throw err;
 				lastError = err;
 			}
+		}
+
+		if (lastError instanceof KibinError && interceptors?.error) {
+			return await interceptors.error({ ...ctx, error: lastError });
 		}
 
 		throw lastError;

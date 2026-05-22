@@ -1,6 +1,6 @@
 import { KibinError } from './errors.js';
 import { getRegisteredActions, isBrandedAction } from './registry.js';
-import type { RpcRequest, RpcResponse } from './types.js';
+import type { RouterInterceptors, RpcRequest, RpcResponse } from './types.js';
 
 type Services = Record<string, object>;
 
@@ -11,7 +11,7 @@ function jsonResponse(body: RpcResponse, status: number): Response {
 	});
 }
 
-export function createRouter<T extends Services>(services: T) {
+export function createRouter<T extends Services>(services: T, interceptors?: RouterInterceptors) {
 	async function handler(request: Request): Promise<Response> {
 		let body: RpcRequest;
 		try {
@@ -51,10 +51,27 @@ export function createRouter<T extends Services>(services: T) {
 			);
 		}
 
+		const ctx = { namespace, method, args, request };
+
 		try {
+			if (interceptors?.beforeAction) {
+				await interceptors.beforeAction(ctx);
+			}
+
 			const result = await fn.apply(service, args);
-			return jsonResponse({ data: result }, 200);
+
+			let finalResult = result;
+			if (interceptors?.afterAction) {
+				const transformed = await interceptors.afterAction({ ...ctx, result });
+				if (transformed !== undefined) finalResult = transformed;
+			}
+
+			return jsonResponse({ data: finalResult }, 200);
 		} catch (error) {
+			if (interceptors?.onError) {
+				await interceptors.onError({ ...ctx, error });
+			}
+
 			if (error instanceof KibinError) {
 				return jsonResponse(
 					{ error: { code: error.code, message: error.message } },

@@ -15,25 +15,27 @@ export default function App() {
 
 	async function handleCreateUser(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
-		const fd = new FormData(e.currentTarget);
+		const form = e.currentTarget;
+		const fd = new FormData(form);
 		const user = await client.user.createUser({
 			name: fd.get('name') as string,
 			email: fd.get('email') as string,
 		});
 		setUsers((prev) => [...prev, user]);
-		e.currentTarget.reset();
+		form.reset();
 	}
 
 	async function handleCreatePost(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault();
-		const fd = new FormData(e.currentTarget);
+		const form = e.currentTarget;
+		const fd = new FormData(form);
 		const post = await client.post.createPost({
 			title: fd.get('title') as string,
 			body: fd.get('body') as string,
 			authorId: fd.get('authorId') as string,
 		});
 		setPosts((prev) => [...prev, post]);
-		e.currentTarget.reset();
+		form.reset();
 	}
 
 	return (
