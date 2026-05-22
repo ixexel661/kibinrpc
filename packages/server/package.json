@@ -1,7 +1,7 @@
 {
 	"name": "@kibin/server",
 	"version": "0.0.1",
-	"description": "Framework-agnostic RPC server router with full type inference",
+	"description": "Devloper-friendly RPC server router with full type inference",
 	"license": "MIT",
 	"author": "ixexel661",
 	"repository": {
@@ -9,7 +9,14 @@
 		"url": "https://github.com/ixexel661/kibin",
 		"directory": "packages/server"
 	},
-	"keywords": ["rpc", "server", "typescript", "web-api", "hono"],
+	"keywords": [
+		"rpc",
+		"server",
+		"typescript",
+		"web-api",
+		"api",
+		"backend"
+	],
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
@@ -20,7 +27,9 @@
 	},
 	"main": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"build": "tsdown",
 		"dev": "tsdown --watch"
