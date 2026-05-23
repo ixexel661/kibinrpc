@@ -1,6 +1,6 @@
 {
 	"name": "@kibinrpc/server",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Devloper-friendly RPC server router with full type inference",
 	"license": "MIT",
 	"author": "ixexel661",
