@@ -15,8 +15,8 @@ export default function HomePage() {
 			/>
 			<h1 className="text-4xl font-bold">kibinrpc</h1>
 			<p className="text-fd-muted-foreground text-lg max-w-md mx-auto">
-				Lightweight TypeScript RPC with end-to-end type safety. No code generation, no schema files
-				— just TypeScript.
+				Lightweight TypeScript RPC-like with end-to-end type safety. No code generation, no schema
+				files - just TypeScript.
 			</p>
 			<div className="flex gap-3 justify-center mt-2">
 				<Link
