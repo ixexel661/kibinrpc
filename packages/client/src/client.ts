@@ -20,6 +20,21 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 	const baseDelay = config.retry?.delay ?? RETRY_DEFAULTS.delay;
 	const { interceptors } = config;
 
+	async function getHeaders(): Promise<Record<string, string>> {
+		if (!config.headers) return {};
+		if (typeof config.headers === 'function') return await config.headers();
+		return config.headers;
+	}
+
+	function makeSignal(): AbortSignal | undefined {
+		if (config.signal && config.timeout !== undefined) {
+			return AbortSignal.any([config.signal, AbortSignal.timeout(config.timeout)]);
+		}
+		if (config.signal) return config.signal;
+		if (config.timeout !== undefined) return AbortSignal.timeout(config.timeout);
+		return undefined;
+	}
+
 	let pendingBatch: QueueItem[] = [];
 	let flushScheduled = false;
 
@@ -47,7 +62,12 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 		}
 	}
 
-	async function rpcCall(namespace: string, method: string, args: unknown[]): Promise<unknown> {
+	async function rpcCall(
+		namespace: string,
+		method: string,
+		args: unknown[],
+		skipBatch = false,
+	): Promise<unknown> {
 		let ctx: RequestCtx = { namespace, method, args };
 
 		if (interceptors?.request) {
@@ -55,6 +75,10 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 		}
 
 		return new Promise<unknown>((resolve, reject) => {
+			if (skipBatch) {
+				flushSingle({ ctx, resolve, reject });
+				return;
+			}
 			pendingBatch.push({ ctx, resolve, reject });
 			if (!flushScheduled) {
 				flushScheduled = true;
@@ -83,9 +107,11 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 			if (attempt > 0) await sleep(attempt, baseDelay);
 
 			try {
+				const resolvedHeaders = await getHeaders();
 				const response = await fetch(config.baseUrl, {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json', ...config.headers },
+					headers: { 'Content-Type': 'application/json', ...resolvedHeaders },
+					signal: makeSignal(),
 					body: JSON.stringify(item.ctx),
 				});
 
@@ -104,6 +130,14 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 				await settleSuccess(item, result.data);
 				return;
 			} catch (err) {
+				if (err instanceof Error && err.name === 'TimeoutError') {
+					await settleError(item, new KibinError('TIMEOUT', 'Request timed out', { cause: err }));
+					return;
+				}
+				if (err instanceof Error && err.name === 'AbortError') {
+					await settleError(item, new KibinError('ABORTED', 'Request was aborted', { cause: err }));
+					return;
+				}
 				lastError = err;
 			}
 		}
@@ -124,13 +158,23 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 
 			let results: BatchRpcResult[];
 			try {
+				const resolvedHeaders = await getHeaders();
 				const response = await fetch(config.baseUrl, {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json', ...config.headers },
+					headers: { 'Content-Type': 'application/json', ...resolvedHeaders },
+					signal: makeSignal(),
 					body: JSON.stringify(pending.map((item) => item.ctx)),
 				});
 				results = (await response.json()) as BatchRpcResult[];
 			} catch (err) {
+				if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+					const code = err.name === 'TimeoutError' ? 'TIMEOUT' : 'ABORTED';
+					const msg = err.name === 'TimeoutError' ? 'Request timed out' : 'Request was aborted';
+					await Promise.all(
+						pending.map((item) => settleError(item, new KibinError(code, msg, { cause: err }))),
+					);
+					return;
+				}
 				for (const item of pending) lastErrors.set(item, err);
 				continue;
 			}
@@ -177,20 +221,35 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 		);
 	}
 
-	return new Proxy(
+	function makeNamespaceProxy(namespace: string, skipBatch: boolean) {
+		return new Proxy(
+			{},
+			{
+				get(_, method) {
+					if (typeof method !== 'string') return undefined;
+					return (...args: unknown[]) => rpcCall(namespace, method, args, skipBatch);
+				},
+			},
+		);
+	}
+
+	const unbatchedProxy = new Proxy(
 		{},
 		{
 			get(_, key) {
 				if (typeof key !== 'string') return undefined;
-				return new Proxy(
-					{},
-					{
-						get(_, method) {
-							if (typeof method !== 'string') return undefined;
-							return (...args: unknown[]) => rpcCall(key, method, args);
-						},
-					},
-				);
+				return makeNamespaceProxy(key, true);
+			},
+		},
+	);
+
+	return new Proxy(
+		{},
+		{
+			get(_, key) {
+				if (key === '$unbatched') return unbatchedProxy;
+				if (typeof key !== 'string') return undefined;
+				return makeNamespaceProxy(key, false);
 			},
 		},
 	) as unknown as KibinClient<Router>;

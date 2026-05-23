@@ -35,6 +35,8 @@ Any other thrown value (a plain `Error`, a string, etc.) becomes `{ code: 'INTER
 | `BAD_REQUEST` | Router | Invalid JSON body or batch size exceeds `maxBatchSize` |
 | `INTERNAL_ERROR` | Router | Unhandled exception (message hidden from client) |
 | `BATCH_MISMATCH` | Client | Server returned fewer items than sent in a batch |
+| `TIMEOUT` | Client | Fetch attempt exceeded the configured `timeout` |
+| `ABORTED` | Client | Request was cancelled via `signal` |
 
 ## On the client
 
@@ -66,7 +68,59 @@ import type { KibinError } from '@kibinrpc/client'
 
 err.code     // string — the error code from the server
 err.message  // string — the human-readable message
+err.cause    // unknown — the original error, if one was passed
 ```
+
+## Typed error codes
+
+`KibinError` accepts a generic type parameter so the `code` property can be narrowed to a string literal:
+
+```ts
+import { KibinError } from '@kibinrpc/server'
+
+// TypeScript infers KibinError<'NOT_FOUND'>
+throw new KibinError('NOT_FOUND', 'User not found')
+
+// Explicit type — useful for function signatures
+function forbidden(): never {
+  throw new KibinError<'UNAUTHORIZED'>('UNAUTHORIZED', 'Invalid token')
+}
+```
+
+`isKibinError` accepts an optional second argument to check the code at runtime **and** narrow the type in one step:
+
+```ts
+import { isKibinError } from '@kibinrpc/client'
+
+try {
+  await client.user.getUser('999')
+} catch (err) {
+  if (isKibinError(err, 'NOT_FOUND')) {
+    // err.code is typed as 'NOT_FOUND'
+    console.log(err.message)
+  }
+}
+```
+
+`KibinError` without a type argument defaults to `KibinError<string>`, so all existing code remains valid.
+
+## Error chaining with `cause`
+
+Pass a `cause` to preserve the original error when wrapping exceptions on the server:
+
+```ts
+import { KibinError } from '@kibinrpc/server'
+
+async function getUser(id: string) {
+  try {
+    return await db.users.findById(id)
+  } catch (err) {
+    throw new KibinError('INTERNAL_ERROR', 'Database error', { cause: err })
+  }
+}
+```
+
+The `cause` stays on the server — it follows the standard [ES2022 `Error.cause`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause) convention and is never sent to the client.
 
 ## Batched calls
 

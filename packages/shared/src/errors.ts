@@ -1,13 +1,16 @@
-export class KibinError extends Error {
-	readonly code: string;
+export class KibinError<Code extends string = string> extends Error {
+	readonly code: Code;
 
-	constructor(code: string, message: string) {
-		super(message);
+	constructor(code: Code, message: string, options?: { cause?: unknown }) {
+		super(message, options);
 		this.name = 'KibinError';
 		this.code = code;
 	}
 }
 
-export function isKibinError(error: unknown): error is KibinError {
-	return error instanceof KibinError;
+export function isKibinError<Code extends string = string>(
+	error: unknown,
+	code?: Code,
+): error is KibinError<Code> {
+	return error instanceof KibinError && (code === undefined || error.code === code);
 }

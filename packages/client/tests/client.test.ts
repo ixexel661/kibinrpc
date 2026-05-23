@@ -171,6 +171,102 @@ describe('batch — partial failure & retry', () => {
 	});
 });
 
+describe('timeout and abort', () => {
+	it('rejects with TIMEOUT when fetch throws TimeoutError', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockRejectedValue(new DOMException('The operation timed out.', 'TimeoutError')),
+		);
+		const client = createKibinClient<any>({
+			baseUrl: 'http://localhost/rpc',
+			timeout: 100,
+			retry: { attempts: 1, delay: 1 },
+		});
+
+		const err = await client.ns.op().catch((e) => e);
+		expect(isKibinError(err)).toBe(true);
+		expect(err.code).toBe('TIMEOUT');
+	});
+
+	it('rejects with ABORTED when fetch throws AbortError', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError')),
+		);
+		const client = createKibinClient<any>({
+			baseUrl: 'http://localhost/rpc',
+			signal: AbortSignal.abort(),
+		});
+
+		const err = await client.ns.op().catch((e) => e);
+		expect(isKibinError(err)).toBe(true);
+		expect(err.code).toBe('ABORTED');
+	});
+
+	it('TIMEOUT does not retry', async () => {
+		const fetch = vi
+			.fn()
+			.mockRejectedValue(new DOMException('The operation timed out.', 'TimeoutError'));
+		vi.stubGlobal('fetch', fetch);
+		const client = createKibinClient<any>({
+			baseUrl: 'http://localhost/rpc',
+			timeout: 100,
+			retry: { attempts: 3, delay: 1 },
+		});
+
+		await client.ns.op().catch(() => {});
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('rejects all batch items with ABORTED on batch fetch abort', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError')),
+		);
+		const client = createKibinClient<any>({
+			baseUrl: 'http://localhost/rpc',
+			signal: AbortSignal.abort(),
+		});
+
+		const [e1, e2] = await Promise.all([
+			client.ns.a().catch((e) => e),
+			client.ns.b().catch((e) => e),
+		]);
+		expect(isKibinError(e1)).toBe(true);
+		expect(e1.code).toBe('ABORTED');
+		expect(isKibinError(e2)).toBe(true);
+		expect(e2.code).toBe('ABORTED');
+	});
+});
+
+describe('dynamic headers', () => {
+	it('calls headers function and sends the result', async () => {
+		const fetch = mockFetch({ data: 'ok' });
+		vi.stubGlobal('fetch', fetch);
+		const getHeaders = vi.fn().mockResolvedValue({ Authorization: 'Bearer token' });
+		const client = createKibinClient<any>({ baseUrl: 'http://localhost/rpc', headers: getHeaders });
+
+		await client.ns.op();
+
+		expect(getHeaders).toHaveBeenCalledOnce();
+		expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer token');
+	});
+
+	it('calls headers function on every retry', async () => {
+		const fetch = mockFetch({ error: { code: 'INTERNAL_ERROR', message: 'fail' } }, 500);
+		vi.stubGlobal('fetch', fetch);
+		let callCount = 0;
+		const client = createKibinClient<any>({
+			baseUrl: 'http://localhost/rpc',
+			headers: () => ({ 'X-Count': String(++callCount) }),
+			retry: { attempts: 3, delay: 1 },
+		});
+
+		await client.ns.op().catch(() => {});
+		expect(callCount).toBe(3);
+	});
+});
+
 describe('interceptors', () => {
 	it('request interceptor can modify args', async () => {
 		const fetch = mockFetch({ data: 'ok' });

@@ -48,6 +48,19 @@ const posts = await client.post.listPosts()
 
 No configuration is required. The server receives either a single object or an array and handles both automatically.
 
+## Bypassing the batch queue
+
+Use `$unbatched` to send a call as a standalone HTTP request, skipping the microtask queue entirely:
+
+```ts
+// Sent immediately as a single request — never grouped with other calls
+const user = await client.$unbatched.user.getUser('1')
+```
+
+This is useful when you need guaranteed ordering, want to avoid a call being grouped with others, or are testing individual actions in isolation.
+
+`$unbatched` has the same type signature as the regular client, so no other code changes are needed.
+
 ## Configuration
 
 ```ts
@@ -58,6 +71,12 @@ const client = createKibinClient<AppRouter>({
   headers: {
     'X-App-Version': '1.0.0',
   },
+
+  // Per-attempt timeout in ms (uses AbortSignal.timeout internally)
+  timeout: 10_000,
+
+  // AbortSignal to cancel all requests from this client
+  signal: controller.signal,
 
   // Retry on network errors and 5xx responses
   retry: {
@@ -73,6 +92,64 @@ const client = createKibinClient<AppRouter>({
   },
 })
 ```
+
+## Timeout and cancellation
+
+### `timeout`
+
+Set a per-attempt time limit in milliseconds. Each retry gets its own fresh timer:
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  timeout: 5_000, // each attempt must complete within 5 s
+})
+```
+
+If an attempt exceeds the limit, it throws a `KibinError` with code `TIMEOUT` and does not retry.
+
+### `signal`
+
+Pass an `AbortSignal` to cancel all requests from this client at once — useful for component unmount, navigation, or user-triggered cancellation:
+
+```ts
+const controller = new AbortController()
+
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  signal: controller.signal,
+})
+
+// Later — cancels any in-flight request
+controller.abort()
+```
+
+When the signal fires, pending requests reject with `KibinError` code `ABORTED`.
+
+Both options can be combined — whichever fires first wins:
+
+```ts
+createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  timeout: 5_000,
+  signal: controller.signal, // aborts if component unmounts before the timeout
+})
+```
+
+## Dynamic headers
+
+`headers` accepts a function (sync or async) that is called once per fetch attempt. This is the idiomatic way to attach tokens that may change between retries:
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  headers: async () => ({
+    Authorization: `Bearer ${await getAccessToken()}`,
+  }),
+})
+```
+
+The function is called fresh on every attempt, so a token refreshed during a retry is always current.
 
 ## Retry behaviour
 

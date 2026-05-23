@@ -10,8 +10,12 @@ type ServiceClient<T> = {
 
 type ExtractServices<T> = T extends { services: infer S } ? S : never;
 
-export type KibinClient<Router> = {
+type RouterServices<Router> = {
 	[K in keyof ExtractServices<Router>]: ServiceClient<ExtractServices<Router>[K]>;
+};
+
+export type KibinClient<Router> = RouterServices<Router> & {
+	$unbatched: RouterServices<Router>;
 };
 
 export interface RequestCtx {
@@ -43,7 +47,14 @@ export interface RetryConfig {
 
 export interface KibinClientConfig {
 	baseUrl: string;
-	headers?: Record<string, string>;
+	/** Static headers or a function returning headers (sync or async). Called once per fetch attempt. */
+	headers?:
+		| Record<string, string>
+		| (() => Record<string, string> | Promise<Record<string, string>>);
+	/** Per-attempt timeout in ms. Uses `AbortSignal.timeout()` internally. */
+	timeout?: number;
+	/** AbortSignal to cancel all requests from this client. */
+	signal?: AbortSignal;
 	retry?: RetryConfig;
 	interceptors?: ClientInterceptors;
 }
