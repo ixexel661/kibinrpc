@@ -26,7 +26,7 @@ export default function HomePage() {
 					Get started
 				</Link>
 				<a
-					href="https://github.com/ixexel661/kibin"
+					href="https://github.com/ixexel661/kibinrpc"
 					className="border border-fd-border px-4 py-2 rounded-md font-medium text-sm hover:bg-fd-accent transition-colors"
 				>
 					GitHub
