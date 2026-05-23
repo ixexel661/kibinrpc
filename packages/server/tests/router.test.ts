@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { KibinError } from '../src/errors.js';
 import { defineActions } from '../src/fn.js';
 import { createRouter } from '../src/router.js';
-
-function makeRequest(body: unknown) {
-	return new Request('http://localhost/rpc', {
-		method: 'POST',
-		body: JSON.stringify(body),
-	});
-}
+import { makeRequest } from './fixtures.js';
 
 const services = {
 	math: defineActions({

@@ -1,4 +1,4 @@
-import { SERVER_ACTIONS_KEY } from './registry.js';
+import { ensureActionsSet } from './registry.js';
 
 export function ServerAction() {
 	return <This, Args extends unknown[], Return>(
@@ -7,10 +7,7 @@ export function ServerAction() {
 	) => {
 		context.addInitializer(function (this: This) {
 			if (typeof context.name === 'symbol') return;
-			if (!Reflect.has(this as object, SERVER_ACTIONS_KEY)) {
-				Reflect.set(this as object, SERVER_ACTIONS_KEY, new Set<string>());
-			}
-			(Reflect.get(this as object, SERVER_ACTIONS_KEY) as Set<string>).add(context.name);
+			ensureActionsSet(this as object).add(context.name);
 		});
 		return target;
 	};

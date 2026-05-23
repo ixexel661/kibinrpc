@@ -11,11 +11,15 @@ function jsonResponse(body: RpcResponse | RpcBatchItemResponse[], status: number
 	});
 }
 
+const ERROR_STATUS: Record<string, number> = {
+	NOT_FOUND: 404,
+	METHOD_NOT_FOUND: 404,
+	BAD_REQUEST: 400,
+};
+
 function statusFromResponse(result: RpcResponse): number {
 	if (!result.error) return 200;
-	if (result.error.code === 'NOT_FOUND' || result.error.code === 'METHOD_NOT_FOUND') return 404;
-	if (result.error.code === 'BAD_REQUEST') return 400;
-	return 500;
+	return ERROR_STATUS[result.error.code ?? ''] ?? 500;
 }
 
 async function executeRpcCall(
