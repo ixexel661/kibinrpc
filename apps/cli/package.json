@@ -1,0 +1,16 @@
+{
+	"name": "kibinrpc",
+	"version": "0.1.0",
+	"description": "CLI for kibinrpc",
+	"license": "MIT",
+	"type": "module",
+	"bin": {
+		"kibinrpc": "./bin/kibinrpc.js"
+	},
+	"files": [
+		"bin"
+	],
+	"engines": {
+		"node": ">=18"
+	}
+}
