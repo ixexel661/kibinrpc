@@ -1,6 +1,6 @@
 {
 	"name": "@kibinrpc/client",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "Type-safe and developer-friendly RPC client with end-to-end type inference",
 	"license": "MIT",
 	"author": "ixexel661",
