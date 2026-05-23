@@ -7,6 +7,14 @@ type RpcResult = { data?: unknown; error?: { code?: string; message?: string } }
 type BatchRpcResult = RpcResult & { status: number };
 type QueueItem = { ctx: RequestCtx; resolve: (v: unknown) => void; reject: (e: unknown) => void };
 
+function rpcError(error: { code?: string; message?: string }): KibinError {
+	return new KibinError(error.code ?? 'RPC_ERROR', error.message ?? 'RPC Error');
+}
+
+function sleep(attempt: number, baseDelay: number): Promise<void> {
+	return new Promise<void>((r) => setTimeout(r, baseDelay * 2 ** (attempt - 1)));
+}
+
 export function createKibinClient<Router>(config: KibinClientConfig): KibinClient<Router> {
 	const maxAttempts = config.retry?.attempts ?? RETRY_DEFAULTS.attempts;
 	const baseDelay = config.retry?.delay ?? RETRY_DEFAULTS.delay;
@@ -14,6 +22,30 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 
 	let pendingBatch: QueueItem[] = [];
 	let flushScheduled = false;
+
+	async function settleError(item: QueueItem, err: KibinError): Promise<void> {
+		if (interceptors?.error) {
+			try {
+				item.resolve(await interceptors.error({ ...item.ctx, error: err }));
+			} catch (interceptorError) {
+				item.reject(interceptorError);
+			}
+		} else {
+			item.reject(err);
+		}
+	}
+
+	async function settleSuccess(item: QueueItem, data: unknown): Promise<void> {
+		if (interceptors?.response) {
+			try {
+				item.resolve(await interceptors.response({ ...item.ctx, data }));
+			} catch (interceptorError) {
+				item.reject(interceptorError);
+			}
+		} else {
+			item.resolve(data);
+		}
+	}
 
 	async function rpcCall(namespace: string, method: string, args: unknown[]): Promise<unknown> {
 		let ctx: RequestCtx = { namespace, method, args };
@@ -45,57 +77,39 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 	}
 
 	async function flushSingle(item: QueueItem) {
-		const { ctx } = item;
 		let lastError: unknown;
 
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
-			if (attempt > 0) {
-				await new Promise<void>((resolve) => setTimeout(resolve, baseDelay * 2 ** (attempt - 1)));
-			}
+			if (attempt > 0) await sleep(attempt, baseDelay);
 
 			try {
 				const response = await fetch(config.baseUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json', ...config.headers },
-					body: JSON.stringify(ctx),
+					body: JSON.stringify(item.ctx),
 				});
 
 				const result = (await response.json()) as RpcResult;
 
 				if (result.error) {
-					const err = new KibinError(
-						result.error.code ?? 'RPC_ERROR',
-						result.error.message ?? 'RPC Error',
-					);
+					const err = rpcError(result.error);
 					if (response.status >= 500) {
 						lastError = err;
 						continue;
 					}
-					if (interceptors?.error) {
-						item.resolve(await interceptors.error({ ...ctx, error: err }));
-					} else {
-						item.reject(err);
-					}
+					await settleError(item, err);
 					return;
 				}
 
-				if (interceptors?.response) {
-					item.resolve(await interceptors.response({ ...ctx, data: result.data }));
-				} else {
-					item.resolve(result.data);
-				}
+				await settleSuccess(item, result.data);
 				return;
 			} catch (err) {
-				if (err instanceof KibinError) {
-					item.reject(err);
-					return;
-				}
 				lastError = err;
 			}
 		}
 
-		if (lastError instanceof KibinError && interceptors?.error) {
-			item.resolve(await interceptors.error({ ...ctx, error: lastError }));
+		if (lastError instanceof KibinError) {
+			await settleError(item, lastError);
 		} else {
 			item.reject(lastError);
 		}
@@ -106,9 +120,7 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 		const lastErrors = new Map<QueueItem, unknown>();
 
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
-			if (attempt > 0) {
-				await new Promise<void>((r) => setTimeout(r, baseDelay * 2 ** (attempt - 1)));
-			}
+			if (attempt > 0) await sleep(attempt, baseDelay);
 
 			let results: BatchRpcResult[];
 			try {
@@ -130,26 +142,15 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 				const item = pending[i];
 
 				if (result?.error) {
-					const err = new KibinError(
-						result.error.code ?? 'RPC_ERROR',
-						result.error.message ?? 'RPC Error',
-					);
+					const err = rpcError(result.error);
 					if (result.status >= 500) {
 						retryItems.push(item);
 						lastErrors.set(item, err);
 					} else {
-						if (interceptors?.error) {
-							item.resolve(await interceptors.error({ ...item.ctx, error: err }));
-						} else {
-							item.reject(err);
-						}
+						await settleError(item, err);
 					}
 				} else {
-					if (interceptors?.response) {
-						item.resolve(await interceptors.response({ ...item.ctx, data: result?.data }));
-					} else {
-						item.resolve(result?.data);
-					}
+					await settleSuccess(item, result?.data);
 				}
 			}
 
@@ -159,8 +160,8 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 
 		for (const item of pending) {
 			const err = lastErrors.get(item);
-			if (err instanceof KibinError && interceptors?.error) {
-				item.resolve(await interceptors.error({ ...item.ctx, error: err }));
+			if (err instanceof KibinError) {
+				await settleError(item, err);
 			} else {
 				item.reject(err);
 			}
@@ -170,11 +171,13 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 	return new Proxy(
 		{},
 		{
-			get(_, key: string) {
+			get(_, key) {
+				if (typeof key !== 'string') return undefined;
 				return new Proxy(
 					{},
 					{
-						get(_, method: string) {
+						get(_, method) {
+							if (typeof method !== 'string') return undefined;
 							return (...args: unknown[]) => rpcCall(key, method, args);
 						},
 					},

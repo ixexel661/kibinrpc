@@ -20,8 +20,8 @@
 		"test:client": "pnpm --filter @kibinrpc/client run test",
 		"test:node": "pnpm --filter @examples/node run test",
 		"test:e2e": "pnpm --filter @app/frontend run test:e2e",
-		"release:bump": "bumpp packages/*/package.json --no-push",
-		"release": "pnpm run release:bump && pnpm run build && pnpm --filter './packages/*' publish"
+		"release:bump": "bumpp packages/*/package.json apps/cli/package.json --no-push",
+		"release": "pnpm run release:bump && pnpm run build && pnpm --filter './packages/*' publish && pnpm --filter kibinrpc publish"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.15",
