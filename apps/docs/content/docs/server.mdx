@@ -157,8 +157,10 @@ The HTTP status of a batch response is `200` if all items succeed, or `207 Multi
 
 | Error code | HTTP status |
 |---|---|
-| `NOT_FOUND`, `METHOD_NOT_FOUND` | 404 |
 | `BAD_REQUEST` | 400 |
+| `UNAUTHORIZED` | 401 |
+| `FORBIDDEN` | 403 |
+| `NOT_FOUND`, `METHOD_NOT_FOUND` | 404 |
 | everything else | 500 |
 
 ## Exported types

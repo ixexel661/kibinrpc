@@ -12,9 +12,11 @@ function jsonResponse(body: RpcResponse | RpcBatchItemResponse[], status: number
 }
 
 const ERROR_STATUS: Record<string, number> = {
+	BAD_REQUEST: 400,
+	UNAUTHORIZED: 401,
+	FORBIDDEN: 403,
 	NOT_FOUND: 404,
 	METHOD_NOT_FOUND: 404,
-	BAD_REQUEST: 400,
 };
 
 function statusFromResponse(result: RpcResponse): number {
@@ -48,6 +50,10 @@ async function executeRpcCall(
 				message: `"${method}" is not a registered server action`,
 			},
 		};
+	}
+
+	if (!Array.isArray(args)) {
+		return { error: { code: 'BAD_REQUEST', message: '"args" must be an array' } };
 	}
 
 	const ctx = { namespace, method, args, request };

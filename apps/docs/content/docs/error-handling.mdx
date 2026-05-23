@@ -21,9 +21,11 @@ Any other thrown value (a plain `Error`, a string, etc.) becomes `{ code: 'INTER
 
 | Error code | HTTP status |
 |---|---|
+| `BAD_REQUEST` | 400 |
+| `UNAUTHORIZED` | 401 |
+| `FORBIDDEN` | 403 |
 | `NOT_FOUND` | 404 |
 | `METHOD_NOT_FOUND` | 404 |
-| `BAD_REQUEST` | 400 |
 | everything else | 500 |
 
 ### Built-in error codes
@@ -32,11 +34,22 @@ Any other thrown value (a plain `Error`, a string, etc.) becomes `{ code: 'INTER
 |---|---|---|
 | `NOT_FOUND` | Router | Namespace does not exist |
 | `METHOD_NOT_FOUND` | Router | Method is not a registered action |
-| `BAD_REQUEST` | Router | Invalid JSON body or batch size exceeds `maxBatchSize` |
+| `BAD_REQUEST` | Router | Invalid JSON body, `args` is not an array, or batch size exceeds `maxBatchSize` |
+| `UNAUTHORIZED` | Your code | Throw to signal authentication failure — maps to HTTP 401 |
+| `FORBIDDEN` | Your code | Throw to signal authorization failure — maps to HTTP 403 |
 | `INTERNAL_ERROR` | Router | Unhandled exception (message hidden from client) |
 | `BATCH_MISMATCH` | Client | Server returned fewer items than sent in a batch |
 | `TIMEOUT` | Client | Fetch attempt exceeded the configured `timeout` |
 | `ABORTED` | Client | Request was cancelled via `signal` |
+
+## isKibinError
+
+`isKibinError` is available from both packages — use whichever you're already importing:
+
+```ts
+import { isKibinError } from '@kibinrpc/server' // in server interceptors
+import { isKibinError } from '@kibinrpc/client'  // in client code
+```
 
 ## On the client
 
