@@ -13,9 +13,10 @@ FROM base AS builder
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/docs/node_modules ./apps/docs/node_modules
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/docs ./apps/docs
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm --filter=docs exec fumadocs-mdx
+RUN cd apps/docs && node_modules/.bin/fumadocs-mdx
 RUN pnpm --filter=docs run build
 
 # Run
