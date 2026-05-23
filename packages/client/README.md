@@ -169,3 +169,10 @@ import type {
   RetryConfig,
 } from "@kibinrpc/client"
 ```
+
+## Related packages
+
+| Package | Description |
+|---|---|
+| [`@kibinrpc/server`](../server/README.md) | Server-side router and action decorators |
+| [`@kibinrpc/tanstack-query`](../tanstack-query/README.md) | TanStack Query adapter — `queryOptions`, `mutationOptions`, and query key factories |

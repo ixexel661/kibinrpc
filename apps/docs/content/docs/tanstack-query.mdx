@@ -1,0 +1,304 @@
+---
+title: TanStack Query
+description: First-class TanStack Query (v5) integration with type-safe query options, mutation options, and query key factories.
+---
+
+## Installation
+
+```sh
+npm install @kibinrpc/tanstack-query @kibinrpc/client @tanstack/react-query
+```
+
+`@kibinrpc/tanstack-query` is a pure adapter — it does not pull in React itself. You can use it with any TanStack Query adapter (React, Solid, Vue, …).
+
+## Setup
+
+Create a single module that exports the `QueryClient`, the RPC client, and the query proxy:
+
+```ts
+// src/kibin.ts
+import { createKibinClient } from '@kibinrpc/client'
+import { createKibinQuery } from '@kibinrpc/tanstack-query'
+import { QueryClient } from '@tanstack/react-query'
+import type { AppRouter } from './server/router'
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+})
+
+export const client = createKibinClient<AppRouter>({ baseUrl: '/api/rpc' })
+
+// query.user.listUsers.queryOptions([])
+// query.user.createUser.mutationOptions({ onSuccess: ... })
+// query.user.queryKey() ← broad key for invalidation
+export const query = createKibinQuery(client)
+```
+
+Wrap your app in the standard `QueryClientProvider`:
+
+```tsx
+// src/main.tsx
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './kibin'
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <YourApp />
+    </QueryClientProvider>
+  )
+}
+```
+
+## createKibinQuery
+
+```ts
+import { createKibinQuery } from '@kibinrpc/tanstack-query'
+
+const query = createKibinQuery(client)
+
+// Optional: change the query key prefix (default: '@kibinrpc')
+const query = createKibinQuery(client, { queryKeyPrefix: 'myapp' })
+```
+
+`createKibinQuery` takes a `KibinClient<Router>` and returns a `KibinQueryProxy<Router>` — a mirror of your client where each method is replaced by a set of TanStack Query helpers.
+
+## Queries
+
+### queryOptions
+
+Use `queryOptions` to get a fully-typed options object for `useQuery`, `useSuspenseQuery`, `prefetchQuery`, `fetchQuery`, or `useQueries`.
+
+```tsx
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { query } from './kibin'
+
+function UserList() {
+  const { data, isLoading, error } = useQuery(
+    query.user.listUsers.queryOptions([])
+  )
+  // data is inferred as User[]
+}
+
+function UserDetail({ id }: { id: string }) {
+  // useSuspenseQuery — suspends until data is available
+  const { data } = useSuspenseQuery(
+    query.user.getUser.queryOptions([id], { staleTime: 60_000 })
+  )
+}
+```
+
+The second argument of `queryOptions` accepts any standard TanStack Query option except `queryKey` and `queryFn`, which are generated automatically.
+
+### Parallel queries (auto-batched)
+
+Multiple `useQuery` calls in the same render are auto-batched by kibinrpc into a single HTTP request:
+
+```tsx
+function Dashboard() {
+  const users = useQuery(query.user.listUsers.queryOptions([]))
+  const posts = useQuery(query.post.listPosts.queryOptions([]))
+  // ↑ One HTTP request, two results
+}
+```
+
+### Prefetching (SSR / route loaders)
+
+```ts
+// In a route loader or server component
+await queryClient.prefetchQuery(query.user.listUsers.queryOptions([]))
+```
+
+## Mutations
+
+### mutationOptions
+
+Use `mutationOptions` to get a fully-typed options object for `useMutation`.
+
+```tsx
+import { useMutation } from '@tanstack/react-query'
+import { query, queryClient } from './kibin'
+
+function CreateUserForm() {
+  const createUser = useMutation(
+    query.user.createUser.mutationOptions({
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: query.user.queryKey() }),
+    })
+  )
+
+  function handleSubmit(name: string, email: string) {
+    // Pass arguments as a tuple matching the server method signature
+    createUser.mutate([{ name, email }])
+  }
+
+  return (
+    <form onSubmit={...}>
+      <button disabled={createUser.isPending}>
+        {createUser.isPending ? 'Saving…' : 'Create User'}
+      </button>
+      {createUser.error && <p>{createUser.error.message}</p>}
+    </form>
+  )
+}
+```
+
+Arguments are always passed as a **tuple** matching the server method's parameter list — the same tuple you'd pass directly to `client.user.createUser(...)`.
+
+## Query Keys
+
+Every method exposes `queryKey()` and every namespace exposes a namespace-level `queryKey()`. TanStack Query's prefix-matching means invalidating a broad key automatically covers all narrower ones beneath it.
+
+```ts
+// Namespace level — invalidates all queries in this namespace
+query.user.queryKey()
+// → ['@kibinrpc', 'user']
+
+// Method level — invalidates all calls to this method regardless of args
+query.user.getUser.queryKey()
+// → ['@kibinrpc', 'user', 'getUser']
+
+// Call level — invalidates exactly this call
+query.user.getUser.queryKey(['user-1'])
+// → ['@kibinrpc', 'user', 'getUser', { args: ['user-1'] }]
+```
+
+### Invalidation patterns
+
+```ts
+// After creating a user, refresh the entire user namespace
+queryClient.invalidateQueries({ queryKey: query.user.queryKey() })
+
+// After updating post-1, refresh only that post
+queryClient.invalidateQueries({ queryKey: query.post.getPost.queryKey(['post-1']) })
+
+// Remove a specific query from the cache
+queryClient.removeQueries({ queryKey: query.post.getPost.queryKey(['post-1']) })
+
+// Set cached data directly (optimistic updates)
+queryClient.setQueryData(
+  query.user.getUser.queryKey(['user-1']),
+  updatedUser
+)
+```
+
+## Full example
+
+```tsx
+import { isKibinError } from '@kibinrpc/client'
+import { QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query'
+import { query, queryClient } from './kibin'
+import type { client } from './kibin'
+
+type User = Awaited<ReturnType<typeof client.user.listUsers>>[number]
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <UserSection />
+    </QueryClientProvider>
+  )
+}
+
+function UserSection() {
+  const users = useQuery(query.user.listUsers.queryOptions([]))
+
+  const createUser = useMutation(
+    query.user.createUser.mutationOptions({
+      onSuccess: () =>
+        queryClient.invalidateQueries({ queryKey: query.user.queryKey() }),
+    }),
+  )
+
+  return (
+    <section>
+      {users.isLoading && <p>Loading…</p>}
+
+      {users.isError && (
+        <p style={{ color: 'crimson' }}>
+          {isKibinError(users.error)
+            ? `${users.error.code}: ${users.error.message}`
+            : 'Unexpected error'}
+        </p>
+      )}
+
+      <ul>
+        {users.data?.map((u: User) => (
+          <li key={u.id}>{u.name} — {u.email}</li>
+        ))}
+      </ul>
+
+      <button
+        onClick={() => createUser.mutate([{ name: 'Alice', email: 'alice@example.com' }])}
+        disabled={createUser.isPending}
+      >
+        {createUser.isPending ? 'Adding…' : 'Add User'}
+      </button>
+
+      {createUser.error && (
+        <p style={{ color: 'crimson' }}>
+          {isKibinError(createUser.error)
+            ? `${createUser.error.code}: ${createUser.error.message}`
+            : 'Unexpected error'}
+        </p>
+      )}
+    </section>
+  )
+}
+```
+
+## Error handling
+
+All query and mutation errors are typed as `KibinError`. Use `isKibinError` from `@kibinrpc/client` to narrow the type and access `code` and `message`:
+
+```tsx
+import { isKibinError } from '@kibinrpc/client'
+
+if (isKibinError(error)) {
+  console.log(error.code)    // e.g. 'NOT_FOUND', 'TIMEOUT'
+  console.log(error.message) // human-readable description
+}
+```
+
+See [Error Handling](/docs/error-handling) for the full list of built-in codes.
+
+## API reference
+
+### `createKibinQuery(client, config?)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `client` | `KibinClient<Router>` | The kibinrpc client to wrap |
+| `config.queryKeyPrefix` | `string` | Prefix for all generated query keys. Default: `'@kibinrpc'` |
+
+Returns a `KibinQueryProxy<Router>`.
+
+### `KibinQueryProxy<Router>`
+
+For every namespace `NS` and method `M` on the client:
+
+| Property | Signature | Description |
+|---|---|---|
+| `query[NS][M].queryOptions` | `(args, options?) => QueryObserverOptions` | Options for `useQuery`, `useSuspenseQuery`, `prefetchQuery`, … |
+| `query[NS][M].queryKey` | `(args?) => readonly unknown[]` | Stable key for this method. Pass args for a call-level key, omit for a method-level key |
+| `query[NS][M].mutationOptions` | `(options?) => MutationObserverOptions` | Options for `useMutation` |
+| `query[NS][M].mutationKey` | `() => readonly unknown[]` | Stable key for the devtools |
+| `query[NS].queryKey` | `() => readonly unknown[]` | Namespace-level key for broad invalidation |
+
+## Known limitations
+
+**AbortSignal from TanStack Query is not forwarded.** TanStack Query passes a `signal` to `queryFn` to support query cancellation. kibinrpc does not currently accept a per-call signal, so cancelling a query from TQ's side (e.g. unmounting a component) does not abort the underlying HTTP request.
+
+As a workaround, override `queryFn` manually or create a dedicated client configured with `signal`:
+
+```ts
+query.user.listUsers.queryOptions([], {
+  queryFn: ({ signal }) =>
+    createKibinClient<AppRouter>({ baseUrl: '/api/rpc', signal }).user.listUsers(),
+})
+```

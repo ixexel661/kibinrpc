@@ -10,6 +10,9 @@
   <a href="https://npmx.dev/package/@kibinrpc/client">
     <img alt="@kibinrpc/client on npm" src="https://img.shields.io/npm/v/@kibinrpc/client?label=%40kibinrpc%2Fclient&labelColor=grey&color=blue">
   </a>
+  <a href="https://npmx.dev/package/@kibinrpc/tanstack-query">
+    <img alt="@kibinrpc/tanstack-query on npm" src="https://img.shields.io/npm/v/@kibinrpc/tanstack-query?label=%40kibinrpc%2Ftanstack-query&labelColor=grey&color=blue">
+  </a>
   <a href="https://github.com/ixexel661/kibin">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ixexel661/kibin?style=flat">
   </a>
@@ -26,6 +29,7 @@ A lightweight, framework-agnostic TypeScript RPC-like library with end-to-end ty
 |---|---|
 | [`@kibinrpc/server`](./packages/server) | Server router and action registration |
 | [`@kibinrpc/client`](./packages/client) | Type-safe fetch-based RPC client |
+| [`@kibinrpc/tanstack-query`](./packages/tanstack-query) | TanStack Query adapter — `queryOptions`, `mutationOptions`, and query key factories |
 
 ## How it works
 
@@ -172,11 +176,13 @@ const client = createKibinClient<AppRouter>({
 | [`examples/node`](./examples/node) | Minimal setup with vanilla `node:http` |
 | [`examples/backend`](./examples/backend) | Hono server with interceptors |
 | [`examples/frontend`](./examples/frontend) | React + Vite frontend |
+| [`examples/tanstack-query`](./examples/tanstack-query) | React + TanStack Query with auto-batching and cache invalidation |
 
 ```sh
 pnpm example:node
 pnpm example:backend  # then:
 pnpm example:frontend
+pnpm example:tanstack-query
 ```
 
 ## Development

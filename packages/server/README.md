@@ -159,3 +159,10 @@ import type {
   RpcBatchItemResponse,
 } from "@kibinrpc/server"
 ```
+
+## Related packages
+
+| Package | Description |
+|---|---|
+| [`@kibinrpc/client`](../client/README.md) | Type-safe fetch client with automatic batching and retry |
+| [`@kibinrpc/tanstack-query`](../tanstack-query/README.md) | TanStack Query adapter — `queryOptions`, `mutationOptions`, and query key factories |

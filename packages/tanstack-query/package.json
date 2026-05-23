@@ -1,19 +1,19 @@
 {
-	"name": "@kibinrpc/client",
+	"name": "@kibinrpc/tanstack-query",
 	"version": "0.3.0",
-	"description": "Type-safe and developer-friendly RPC client with end-to-end type inference",
+	"description": "TanStack Query adapter for @kibinrpc/client",
 	"license": "MIT",
 	"author": "ixexel661",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/ixexel661/kibin",
-		"directory": "packages/client"
+		"directory": "packages/tanstack-query"
 	},
 	"keywords": [
 		"rpc",
-		"client",
-		"typescript",
-		"fetch"
+		"tanstack-query",
+		"react-query",
+		"typescript"
 	],
 	"type": "module",
 	"sideEffects": false,
@@ -33,8 +33,15 @@
 		"dev": "tsdown --watch",
 		"test": "vitest run"
 	},
-	"dependencies": {
-		"@kibinrpc/shared": "workspace:*"
+	"peerDependencies": {
+		"@kibinrpc/client": "workspace:*",
+		"@tanstack/react-query": "^5.0.0"
+	},
+	"devDependencies": {
+		"@kibinrpc/client": "workspace:*",
+		"@tanstack/react-query": "catalog:",
+		"tsdown": "catalog:",
+		"vitest": "catalog:"
 	},
 	"publishConfig": {
 		"access": "public"

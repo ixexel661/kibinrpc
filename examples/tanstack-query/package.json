@@ -1,0 +1,24 @@
+{
+	"name": "@examples/tanstack-query",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@app/backend": "workspace:*",
+		"@kibinrpc/client": "workspace:*",
+		"@kibinrpc/tanstack-query": "workspace:*",
+		"@tanstack/react-query": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:"
+	},
+	"devDependencies": {
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"vite": "catalog:"
+	}
+}

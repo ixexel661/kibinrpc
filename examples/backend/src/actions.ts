@@ -22,7 +22,7 @@ export class UserActions {
 	@ServerAction()
 	async getUser(id: string): Promise<User> {
 		const user = this.users.find((u) => u.id === id);
-		if (!user) throw new KibinError('NOT_FOUND', `User "${id}" not found`, 404);
+		if (!user) throw new KibinError('NOT_FOUND', `User "${id}" not found`);
 		return user;
 	}
 
@@ -47,7 +47,7 @@ const posts: Post[] = [
 export const postActions = defineActions({
 	async getPost(id: string): Promise<Post> {
 		const post = posts.find((p) => p.id === id);
-		if (!post) throw new KibinError('NOT_FOUND', `Post "${id}" not found`, 404);
+		if (!post) throw new KibinError('NOT_FOUND', `Post "${id}" not found`);
 		return post;
 	},
 	async listPosts(): Promise<Post[]> {

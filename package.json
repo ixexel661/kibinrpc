@@ -10,6 +10,7 @@
 		"example:node": "pnpm --filter @examples/node dev",
 		"example:backend": "pnpm --filter @app/backend dev",
 		"example:frontend": "pnpm --filter @app/frontend dev",
+		"example:tanstack-query": "pnpm --filter @examples/tanstack-query dev",
 		"check": "biome check",
 		"check:fix": "biome check --write",
 		"lint": "biome lint",

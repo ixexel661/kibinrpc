@@ -1,4 +1,12 @@
 {
 	"title": "kibinrpc",
-	"pages": ["index", "getting-started", "server", "client", "interceptors", "error-handling"]
+	"pages": [
+		"index",
+		"getting-started",
+		"server",
+		"client",
+		"interceptors",
+		"error-handling",
+		"tanstack-query"
+	]
 }
