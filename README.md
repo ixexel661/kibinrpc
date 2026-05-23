@@ -192,7 +192,6 @@ pnpm check:fix   # lint + format fix
 ## Roadmap
 
 - [ ] Fastify adapter
-- [x] Testing
 
 ## License
 

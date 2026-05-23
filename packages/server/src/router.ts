@@ -32,6 +32,10 @@ async function executeRpcCall(
 	}
 
 	const fn = (service as Record<string, unknown>)[method];
+	if (typeof fn !== 'function') {
+		return { error: { code: 'METHOD_NOT_FOUND', message: `Method "${method}" not found` } };
+	}
+
 	const isAllowed = getRegisteredActions(service).has(method) || isBrandedAction(fn);
 	if (!isAllowed) {
 		return {
@@ -40,10 +44,6 @@ async function executeRpcCall(
 				message: `"${method}" is not a registered server action`,
 			},
 		};
-	}
-
-	if (typeof fn !== 'function') {
-		return { error: { code: 'METHOD_NOT_FOUND', message: `Method "${method}" not found` } };
 	}
 
 	const ctx = { namespace, method, args, request };
@@ -64,7 +64,11 @@ async function executeRpcCall(
 		return { data: finalResult };
 	} catch (error) {
 		if (interceptors?.onError) {
-			await interceptors.onError({ ...ctx, error });
+			try {
+				await interceptors.onError({ ...ctx, error });
+			} catch {
+				// onError hook errors are silently ignored to protect the response path
+			}
 		}
 
 		if (error instanceof KibinError) {
@@ -74,7 +78,13 @@ async function executeRpcCall(
 	}
 }
 
-export function createRouter<T extends Services>(services: T, interceptors?: RouterInterceptors) {
+const DEFAULT_MAX_BATCH_SIZE = 50;
+
+export function createRouter<T extends Services>(
+	services: T,
+	interceptors?: RouterInterceptors,
+	{ maxBatchSize = DEFAULT_MAX_BATCH_SIZE }: { maxBatchSize?: number } = {},
+) {
 	async function handler(request: Request): Promise<Response> {
 		let body: RpcRequest | RpcRequest[];
 		try {
@@ -84,6 +94,14 @@ export function createRouter<T extends Services>(services: T, interceptors?: Rou
 		}
 
 		if (Array.isArray(body)) {
+			if (body.length > maxBatchSize) {
+				return jsonResponse(
+					{
+						error: { code: 'BAD_REQUEST', message: `Batch size exceeds limit of ${maxBatchSize}` },
+					},
+					400,
+				);
+			}
 			const results = await Promise.all(
 				body.map((b) => executeRpcCall(b, request, services, interceptors)),
 			);

@@ -1,16 +1,26 @@
 {
 	"name": "kibinrpc",
 	"version": "0.1.0",
-	"description": "CLI for kibinrpc",
+	"description": "Create a new kibinrpc project",
 	"license": "MIT",
 	"type": "module",
 	"bin": {
-		"kibinrpc": "./bin/kibinrpc.js"
+		"kibinrpc": "./dist/index.mjs"
 	},
 	"files": [
-		"bin"
+		"dist"
 	],
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.10.1"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:"
+	},
 	"engines": {
-		"node": ">=18"
+		"node": ">=22"
 	}
 }

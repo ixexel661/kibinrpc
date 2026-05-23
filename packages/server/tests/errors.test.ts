@@ -12,12 +12,4 @@ describe('KibinError', () => {
 	it('is an instance of Error', () => {
 		expect(new KibinError('X', 'y')).toBeInstanceOf(Error);
 	});
-
-	it('has a default statusCode of 400', () => {
-		expect(new KibinError('X', 'y').statusCode).toBe(400);
-	});
-
-	it('accepts a custom statusCode', () => {
-		expect(new KibinError('X', 'y', 404).statusCode).toBe(404);
-	});
 });

@@ -136,36 +136,45 @@ export function createKibinClient<Router>(config: KibinClientConfig): KibinClien
 			}
 
 			const retryItems: QueueItem[] = [];
+			const settlements: Promise<void>[] = [];
 
 			for (let i = 0; i < pending.length; i++) {
 				const result = results[i];
 				const item = pending[i];
 
-				if (result?.error) {
+				if (!result) {
+					item.reject(
+						new KibinError('BATCH_MISMATCH', 'Server returned fewer results than expected'),
+					);
+					continue;
+				}
+
+				if (result.error) {
 					const err = rpcError(result.error);
 					if (result.status >= 500) {
 						retryItems.push(item);
 						lastErrors.set(item, err);
 					} else {
-						await settleError(item, err);
+						settlements.push(settleError(item, err));
 					}
 				} else {
-					await settleSuccess(item, result?.data);
+					settlements.push(settleSuccess(item, result.data));
 				}
 			}
 
+			await Promise.all(settlements);
 			pending = retryItems;
 			if (pending.length === 0) break;
 		}
 
-		for (const item of pending) {
-			const err = lastErrors.get(item);
-			if (err instanceof KibinError) {
-				await settleError(item, err);
-			} else {
+		await Promise.all(
+			pending.map((item) => {
+				const err = lastErrors.get(item);
+				if (err instanceof KibinError) return settleError(item, err);
 				item.reject(err);
-			}
-		}
+				return Promise.resolve();
+			}),
+		);
 	}
 
 	return new Proxy(

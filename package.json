@@ -28,9 +28,9 @@
 		"@playwright/test": "^1.60.0",
 		"bumpp": "^11.1.0",
 		"lefthook": "^2.1.8",
-		"tsdown": "^0.22.0",
-		"typescript": "^6.0.3",
-		"vitest": "^4.1.7"
+		"tsdown": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	},
 	"packageManager": "pnpm@11.2.2"
 }

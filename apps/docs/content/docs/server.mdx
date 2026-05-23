@@ -14,13 +14,25 @@ npm install @kibinrpc/server
 ```ts
 import { createRouter } from '@kibinrpc/server'
 
-const router = createRouter(services, interceptors?)
+const router = createRouter(services, interceptors?, options?)
 
 router.handler   // (request: Request) => Promise<Response>
 router.services  // the original services object
 ```
 
 Pass your services object as the first argument. The second argument is optional — see [Interceptors](/docs/interceptors).
+
+### Options
+
+```ts
+const router = createRouter(services, undefined, {
+  maxBatchSize: 100,
+})
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxBatchSize` | `number` | `50` | Maximum number of calls in a single batch request. Requests exceeding this limit are rejected with `400 BAD_REQUEST`. |
 
 ## Registering actions
 

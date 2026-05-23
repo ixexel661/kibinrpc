@@ -26,6 +26,16 @@ Any other thrown value (a plain `Error`, a string, etc.) becomes `{ code: 'INTER
 | `BAD_REQUEST` | 400 |
 | everything else | 500 |
 
+### Built-in error codes
+
+| Code | Thrown by | Meaning |
+|---|---|---|
+| `NOT_FOUND` | Router | Namespace does not exist |
+| `METHOD_NOT_FOUND` | Router | Method is not a registered action |
+| `BAD_REQUEST` | Router | Invalid JSON body or batch size exceeds `maxBatchSize` |
+| `INTERNAL_ERROR` | Router | Unhandled exception (message hidden from client) |
+| `BATCH_MISMATCH` | Client | Server returned fewer items than sent in a batch |
+
 ## On the client
 
 Use `isKibinError` to distinguish structured server errors from network failures or unexpected exceptions:

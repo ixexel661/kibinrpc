@@ -35,6 +35,9 @@
 		"dev": "tsdown --watch",
 		"test": "vitest run"
 	},
+	"dependencies": {
+		"@kibinrpc/shared": "workspace:*"
+	},
 	"publishConfig": {
 		"access": "public"
 	}

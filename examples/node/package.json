@@ -11,7 +11,7 @@
 		"@kibinrpc/server": "workspace:*"
 	},
 	"devDependencies": {
-		"tsx": "^4.22.3",
-		"@types/node": "25.9.1"
+		"tsx": "catalog:",
+		"@types/node": "catalog:"
 	}
 }
