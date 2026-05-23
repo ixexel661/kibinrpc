@@ -1,0 +1,112 @@
+---
+title: Getting Started
+description: Install kibinrpc and set up your first typed RPC endpoint.
+---
+
+## Installation
+
+```sh
+npm install @kibinrpc/server @kibinrpc/client
+```
+
+## Server setup
+
+### 1. Register actions
+
+Use class decorators or plain functions — both produce the same router type:
+
+```ts
+// router.ts
+import { ServerAction, defineActions, createRouter, KibinError } from '@kibinrpc/server'
+
+class UserActions {
+  @ServerAction()
+  async getUser(id: string) {
+    const user = await db.users.find(id)
+    if (!user) throw new KibinError('NOT_FOUND', 'User not found')
+    return user
+  }
+
+  @ServerAction()
+  async listUsers() {
+    return db.users.findAll()
+  }
+}
+
+const postActions = defineActions({
+  async listPosts() {
+    return db.posts.findAll()
+  },
+})
+
+export const router = createRouter({
+  user: new UserActions(),
+  post: postActions,
+})
+
+export type AppRouter = typeof router
+```
+
+Only functions decorated with `@ServerAction()` or wrapped with `defineActions` / `serverAction` are callable. Everything else is rejected.
+
+### 2. Mount the handler
+
+Mount on any framework that supports the Web `Request`/`Response` API:
+
+```ts
+// Hono
+app.post('/api/rpc', (c) => router.handler(c.req.raw))
+
+// Next.js App Router
+export const POST = router.handler
+
+// Vanilla node:http
+import { createServer } from 'node:http'
+
+createServer(async (req, res) => {
+  if (req.method === 'POST' && req.url === '/api/rpc') {
+    const chunks: Buffer[] = []
+    for await (const chunk of req) chunks.push(chunk)
+    const webReq = new Request('http://localhost/api/rpc', {
+      method: 'POST',
+      headers: req.headers as HeadersInit,
+      body: Buffer.concat(chunks),
+    })
+    const webRes = await router.handler(webReq)
+    res.writeHead(webRes.status, Object.fromEntries(webRes.headers))
+    res.end(await webRes.text())
+  }
+})
+```
+
+The handler automatically detects single vs. batched requests — no second endpoint needed.
+
+## Client setup
+
+```ts
+// client.ts
+import { createKibinClient } from '@kibinrpc/client'
+import type { AppRouter } from './router'
+
+export const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+})
+```
+
+Use the client anywhere:
+
+```ts
+const user = await client.user.getUser('1')    // Promise<User>
+const posts = await client.post.listPosts()    // Promise<Post[]>
+```
+
+Return types are inferred from the server — no manual annotations needed.
+
+## Next steps
+
+<Cards>
+  <Card title="Server" href="/docs/server" description="All server options: decorators, defineActions, interceptors" />
+  <Card title="Client" href="/docs/client" description="Auto-batching, retry, headers" />
+  <Card title="Interceptors" href="/docs/interceptors" description="Auth, logging, transformations" />
+  <Card title="Error Handling" href="/docs/error-handling" description="KibinError, error codes, status mapping" />
+</Cards>

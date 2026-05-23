@@ -6,6 +6,7 @@
 	"scripts": {
 		"build": "pnpm -r run build",
 		"dev": "pnpm -r --parallel run dev",
+		"dev:docs": "pnpm --filter docs dev",
 		"example:node": "pnpm --filter @examples/node dev",
 		"example:backend": "pnpm --filter @app/backend dev",
 		"example:frontend": "pnpm --filter @app/frontend dev",

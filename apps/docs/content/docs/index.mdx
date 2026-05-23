@@ -1,13 +1,57 @@
 ---
-title: Hello World
-description: Your first document
+title: Introduction
+description: Lightweight, framework-agnostic TypeScript RPC with end-to-end type safety.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+kibinrpc is a TypeScript RPC library that gives you a fully typed client inferred directly from your server implementation — no code generation, no schema files, no manual type duplication.
 
-## What is Next?
+## How it works
+
+Define server actions, create a router, and mount a single handler. The client proxy is typed by the server's router type, so method signatures, parameters, and return types all flow through automatically.
+
+```
+POST /api/rpc  →  { namespace, method, args }
+               ←  { data } | { error }
+
+POST /api/rpc  →  [{ namespace, method, args }, ...]   (auto-batched)
+               ←  [{ data, status }, ...]
+```
+
+Calls that happen concurrently (e.g. inside `Promise.all`) are automatically coalesced into a single HTTP request. No explicit batching API is needed.
+
+## Packages
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="@kibinrpc/server" href="/docs/server" description="Router, action registration, interceptors" />
+  <Card title="@kibinrpc/client" href="/docs/client" description="Type-safe fetch client with auto-batching and retry" />
 </Cards>
+
+## Quick example
+
+**Server**
+
+```ts
+import { ServerAction, createRouter } from '@kibinrpc/server'
+
+class UserActions {
+  @ServerAction()
+  async getUser(id: string) {
+    return db.users.find(id)
+  }
+}
+
+export const router = createRouter({ user: new UserActions() })
+export type AppRouter = typeof router
+```
+
+**Client**
+
+```ts
+import { createKibinClient } from '@kibinrpc/client'
+import type { AppRouter } from './server/router'
+
+const client = createKibinClient<AppRouter>({ baseUrl: '/api/rpc' })
+
+// Return type is inferred as the actual return type of getUser
+const user = await client.user.getUser('1')
+```

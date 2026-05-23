@@ -1,0 +1,99 @@
+---
+title: Error Handling
+description: Structured errors from server to client with KibinError.
+---
+
+## On the server
+
+Throw `KibinError` to send a structured error to the client:
+
+```ts
+import { KibinError } from '@kibinrpc/server'
+
+throw new KibinError('NOT_FOUND', 'User not found')
+throw new KibinError('UNAUTHORIZED', 'Invalid token')
+throw new KibinError('BAD_REQUEST', 'Invalid input')
+```
+
+Any other thrown value (a plain `Error`, a string, etc.) becomes `{ code: 'INTERNAL_ERROR' }`. The original message is not sent to the client to avoid leaking internal details.
+
+### HTTP status mapping
+
+| Error code | HTTP status |
+|---|---|
+| `NOT_FOUND` | 404 |
+| `METHOD_NOT_FOUND` | 404 |
+| `BAD_REQUEST` | 400 |
+| everything else | 500 |
+
+## On the client
+
+Use `isKibinError` to distinguish structured server errors from network failures or unexpected exceptions:
+
+```ts
+import { isKibinError } from '@kibinrpc/client'
+
+try {
+  const user = await client.user.getUser('999')
+} catch (err) {
+  if (isKibinError(err)) {
+    // Structured error from the server
+    console.log(err.code)    // e.g. 'NOT_FOUND'
+    console.log(err.message) // e.g. 'User not found'
+  } else {
+    // Network error or unexpected exception
+    console.error(err)
+  }
+}
+```
+
+`isKibinError` is a TypeScript type guard — inside the `if` block, `err` is typed as `KibinError`.
+
+## KibinError type
+
+```ts
+import type { KibinError } from '@kibinrpc/client'
+
+err.code     // string — the error code from the server
+err.message  // string — the human-readable message
+```
+
+## Batched calls
+
+In a batched request, each item has its own error or data. Failed items throw individually — a partial failure does not reject the whole `Promise.all`:
+
+```ts
+try {
+  const [users, post] = await Promise.all([
+    client.user.listUsers(),       // succeeds
+    client.post.getPost('missing'), // throws NOT_FOUND
+  ])
+} catch (err) {
+  if (isKibinError(err)) {
+    console.log(err.code) // 'NOT_FOUND'
+  }
+}
+```
+
+The HTTP response for that batch is `207 Multi-Status`. The client unpacks each item and resolves or rejects each promise independently.
+
+## Error interceptor
+
+Handle errors centrally with the client `error` interceptor:
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  interceptors: {
+    error({ error }) {
+      if (error.code === 'UNAUTHORIZED') {
+        window.location.href = '/login'
+        return // suppress — redirect handles it
+      }
+      throw error // rethrow everything else
+    },
+  },
+})
+```
+
+Returning from the `error` interceptor (instead of throwing) resolves the promise with `undefined`. Rethrowing propagates the error to the caller.

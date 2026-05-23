@@ -1,0 +1,118 @@
+---
+title: Client
+description: Type-safe fetch client with automatic batching, retry, and interceptors.
+---
+
+## Installation
+
+```sh
+npm install @kibinrpc/client
+```
+
+## createKibinClient
+
+```ts
+import { createKibinClient } from '@kibinrpc/client'
+import type { AppRouter } from './server/router'
+
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+})
+```
+
+The generic parameter `AppRouter` is the type of your server's router (`typeof router`). All method signatures, parameters, and return types are inferred from it.
+
+## Making calls
+
+```ts
+// Return type inferred from the server
+const user = await client.user.getUser('1')    // Promise<User>
+const posts = await client.post.listPosts()    // Promise<Post[]>
+```
+
+## Automatic batching
+
+Calls that happen in the same JavaScript tick are automatically coalesced into a single HTTP request:
+
+```ts
+// Both happen in the same tick → one batched request
+const [users, posts] = await Promise.all([
+  client.user.listUsers(),
+  client.post.listPosts(),
+])
+
+// Sequential awaits → two separate requests
+const user = await client.user.getUser('1')
+const posts = await client.post.listPosts()
+```
+
+No configuration is required. The server receives either a single object or an array and handles both automatically.
+
+## Configuration
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+
+  // Static headers sent with every request
+  headers: {
+    'X-App-Version': '1.0.0',
+  },
+
+  // Retry on network errors and 5xx responses
+  retry: {
+    attempts: 3,   // total attempts (default: 3)
+    delay: 300,    // base delay in ms, doubles each retry (default: 300)
+  },
+
+  // See /docs/interceptors
+  interceptors: {
+    request: (ctx) => ctx,
+    response: (ctx) => ctx.data,
+    error: (ctx) => { throw ctx.error },
+  },
+})
+```
+
+## Retry behaviour
+
+Failed requests are retried with exponential backoff. The delay between attempts doubles each time: `delay`, `delay × 2`, `delay × 4`, etc.
+
+| Scenario | Single call | Batched call |
+|---|---|---|
+| Network error | retry all attempts | retry whole batch |
+| HTTP 5xx | retry all attempts | retry only the failed items |
+| HTTP 4xx | no retry, throw immediately | no retry, reject that item |
+
+This means a partial batch failure (e.g. one 404, one 500) retries only the 500 item, while the 404 is immediately rejected.
+
+## isKibinError
+
+Type guard for structured server errors:
+
+```ts
+import { isKibinError } from '@kibinrpc/client'
+
+try {
+  await client.user.getUser('999')
+} catch (err) {
+  if (isKibinError(err)) {
+    console.log(err.code)    // e.g. 'NOT_FOUND'
+    console.log(err.message) // e.g. 'User not found'
+  }
+}
+```
+
+## Exported types
+
+```ts
+import type {
+  KibinClient,
+  KibinClientConfig,
+  ClientInterceptors,
+  RequestCtx,
+  ResponseCtx,
+  ErrorCtx,
+  RetryConfig,
+} from '@kibinrpc/client'
+```

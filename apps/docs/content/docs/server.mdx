@@ -1,0 +1,164 @@
+---
+title: Server
+description: Create a router, register actions, and mount a single handler.
+---
+
+## Installation
+
+```sh
+npm install @kibinrpc/server
+```
+
+## createRouter
+
+```ts
+import { createRouter } from '@kibinrpc/server'
+
+const router = createRouter(services, interceptors?)
+
+router.handler   // (request: Request) => Promise<Response>
+router.services  // the original services object
+```
+
+Pass your services object as the first argument. The second argument is optional — see [Interceptors](/docs/interceptors).
+
+## Registering actions
+
+Only explicitly registered functions are callable from the client. Any call to an unregistered method is rejected with `METHOD_NOT_FOUND`.
+
+### Class decorator
+
+```ts
+import { ServerAction } from '@kibinrpc/server'
+
+class UserActions {
+  @ServerAction()
+  async getUser(id: string) { ... }
+
+  @ServerAction()
+  async createUser(data: NewUser) { ... }
+
+  // Not callable — no decorator
+  private hashPassword(pw: string) { ... }
+}
+```
+
+### defineActions
+
+Register a whole namespace at once with a plain object:
+
+```ts
+import { defineActions } from '@kibinrpc/server'
+
+const postActions = defineActions({
+  async listPosts() { ... },
+  async createPost(data: NewPost) { ... },
+})
+```
+
+### serverAction
+
+Mark individual functions:
+
+```ts
+import { serverAction } from '@kibinrpc/server'
+
+const deletePost = serverAction(async (id: string) => { ... })
+
+const postActions = {
+  list: serverAction(async () => { ... }),
+  delete: deletePost,
+}
+```
+
+### Mixing styles
+
+All styles can be used together in the same router:
+
+```ts
+export const router = createRouter({
+  user: new UserActions(),    // class-based
+  post: postActions,          // defineActions
+  file: { upload: uploadFn }, // serverAction
+})
+```
+
+## Router type
+
+Export the router type to use it as the client's generic parameter:
+
+```ts
+export const router = createRouter({ user, post })
+export type AppRouter = typeof router
+```
+
+```ts
+// In your client code
+import type { AppRouter } from './router'
+
+const client = createKibinClient<AppRouter>({ baseUrl: '/api/rpc' })
+```
+
+## Request format
+
+The handler accepts a POST request with a JSON body:
+
+**Single call**
+
+```json
+{ "namespace": "user", "method": "getUser", "args": ["1"] }
+```
+
+**Batch call** (sent automatically by the client)
+
+```json
+[
+  { "namespace": "user", "method": "listUsers", "args": [] },
+  { "namespace": "post", "method": "listPosts", "args": [] }
+]
+```
+
+## Response format
+
+**Single call**
+
+```json
+{ "data": { "id": "1", "name": "Alice" } }
+```
+
+```json
+{ "error": { "code": "NOT_FOUND", "message": "User not found" } }
+```
+
+**Batch call** — each item carries its own status code:
+
+```json
+[
+  { "data": [...], "status": 200 },
+  { "error": { "code": "NOT_FOUND", "message": "..." }, "status": 404 }
+]
+```
+
+The HTTP status of a batch response is `200` if all items succeed, or `207 Multi-Status` if any item fails.
+
+## HTTP status mapping
+
+| Error code | HTTP status |
+|---|---|
+| `NOT_FOUND`, `METHOD_NOT_FOUND` | 404 |
+| `BAD_REQUEST` | 400 |
+| everything else | 500 |
+
+## Exported types
+
+```ts
+import type {
+  RouterInterceptors,
+  ActionCtx,
+  AfterActionCtx,
+  ActionErrorCtx,
+  RpcRequest,
+  RpcResponse,
+  RpcBatchItemResponse,
+} from '@kibinrpc/server'
+```

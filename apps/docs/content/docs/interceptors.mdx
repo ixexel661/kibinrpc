@@ -1,0 +1,151 @@
+---
+title: Interceptors
+description: Hook into the request/response lifecycle on both the server and client.
+---
+
+Interceptors let you add cross-cutting behaviour — authentication, logging, response transformation — without touching individual action implementations.
+
+## Server interceptors
+
+Server interceptors run for every call, including each item inside a batched request.
+
+```ts
+import { createRouter, KibinError } from '@kibinrpc/server'
+
+const router = createRouter({ user, post }, {
+  beforeAction({ namespace, method, args, request }) { ... },
+  afterAction({ namespace, method, result }) { ... },
+  onError({ namespace, method, error }) { ... },
+})
+```
+
+### beforeAction
+
+Runs before the action is called. Use it to authenticate, authorize, or inject context.
+
+```ts
+beforeAction({ namespace, method, args, request }) {
+  const token = request.headers.get('Authorization')
+  if (!token) throw new KibinError('UNAUTHORIZED', 'Missing token')
+},
+```
+
+Throwing a `KibinError` here rejects the call with a structured error. Any other thrown value becomes `INTERNAL_ERROR`.
+
+### afterAction
+
+Runs after a successful action. Return a value to replace `result`, or return nothing to leave it unchanged.
+
+```ts
+afterAction({ namespace, method, result }) {
+  console.log(`← ${namespace}.${method}`, result)
+  return result
+},
+```
+
+### onError
+
+Runs when an action throws. Use it for logging or reporting. The error still propagates to the client.
+
+```ts
+onError({ namespace, method, error }) {
+  Sentry.captureException(error, { extra: { namespace, method } })
+},
+```
+
+---
+
+## Client interceptors
+
+Client interceptors wrap individual RPC calls before they hit the network.
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  interceptors: {
+    request(ctx) { ... },
+    response(ctx) { ... },
+    error(ctx) { ... },
+  },
+})
+```
+
+### request
+
+Runs before every call. Return the (optionally modified) context.
+
+```ts
+interceptors: {
+  request(ctx) {
+    return {
+      ...ctx,
+      args: [{ ...ctx.args[0], token: getAuthToken() }],
+    }
+  },
+}
+```
+
+`ctx` contains `{ namespace, method, args }`. You can modify `args` but not `namespace` or `method`.
+
+### response
+
+Runs after every successful call. Return the value the caller receives. Defaults to returning `ctx.data` unchanged.
+
+```ts
+interceptors: {
+  response({ namespace, method, data }) {
+    console.log(`← ${namespace}.${method}`, data)
+    return data
+  },
+}
+```
+
+### error
+
+Runs on every failed call, after all retries are exhausted. Return a fallback value or rethrow.
+
+```ts
+interceptors: {
+  error({ namespace, method, error }) {
+    if (error.code === 'UNAUTHORIZED') {
+      window.location.href = '/login'
+    }
+    throw error
+  },
+}
+```
+
+---
+
+## Combined example
+
+A common pattern: add an auth token on the client, verify it on the server.
+
+**Client**
+
+```ts
+const client = createKibinClient<AppRouter>({
+  baseUrl: '/api/rpc',
+  interceptors: {
+    request: (ctx) => ({
+      ...ctx,
+      args: [{ ...ctx.args[0], token: localStorage.getItem('token') }],
+    }),
+    error: ({ error }) => {
+      if (error.code === 'UNAUTHORIZED') window.location.href = '/login'
+      throw error
+    },
+  },
+})
+```
+
+**Server**
+
+```ts
+const router = createRouter({ user, post }, {
+  beforeAction({ args, request }) {
+    const token = request.headers.get('Authorization') ?? args[0]?.token
+    if (!verifyToken(token)) throw new KibinError('UNAUTHORIZED', 'Invalid token')
+  },
+})
+```
