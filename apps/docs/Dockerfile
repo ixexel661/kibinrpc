@@ -6,16 +6,16 @@ FROM base AS deps
 WORKDIR /repo
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/docs/package.json ./apps/docs/package.json
-RUN pnpm install --frozen-lockfile --filter=docs...
+RUN pnpm install --frozen-lockfile --filter=docs... --ignore-scripts
 
 # Build
 FROM base AS builder
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/docs/node_modules ./apps/docs/node_modules
-COPY --from=deps /repo/apps/docs/.source ./apps/docs/.source
 COPY apps/docs ./apps/docs
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter=docs exec fumadocs-mdx
 RUN pnpm --filter=docs run build
 
 # Run
