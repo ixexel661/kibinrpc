@@ -3,7 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "tsx src/index.ts"
+		"dev": "tsx src/index.ts",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@kibinrpc/client": "workspace:*",

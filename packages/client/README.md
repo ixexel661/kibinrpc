@@ -11,15 +11,15 @@ npm install @kibinrpc/client
 ## Quick start
 
 ```ts
-import { createKibinClient } from '@kibinrpc/client'
-import type { AppRouter } from './server/router'
+import { createKibinClient } from "@kibinrpc/client"
+import type { AppRouter } from "./server/router"
 
 const client = createKibinClient<AppRouter>({
-  baseUrl: '/api/rpc',
+  baseUrl: "/api/rpc",
 })
 
 // Return types are inferred from the server — no manual annotations
-const user = await client.user.getUser('1')
+const user = await client.user.getUser("1")
 const posts = await client.post.listPosts()
 ```
 
@@ -35,7 +35,7 @@ const [users, posts] = await Promise.all([
 ])
 
 // Sequential calls → two separate requests
-const user = await client.user.getUser('1')
+const user = await client.user.getUser("1")
 const posts = await client.post.listPosts()
 ```
 
@@ -45,11 +45,11 @@ No configuration required. The server receives either a single object or an arra
 
 ```ts
 const client = createKibinClient<AppRouter>({
-  baseUrl: '/api/rpc',
+  baseUrl: "/api/rpc",
 
   // Static headers sent with every request
   headers: {
-    'X-App-Version': '1.0.0',
+    "X-App-Version": "1.0.0",
   },
 
   // Retry on network errors and 5xx responses
@@ -100,8 +100,8 @@ Runs on every failed call (after retries are exhausted). Return a fallback value
 ```ts
 interceptors: {
   error({ error }) {
-    if (error.code === 'UNAUTHORIZED') {
-      window.location.href = '/login'
+    if (error.code === "UNAUTHORIZED") {
+      window.location.href = "/login"
     }
     throw error
   },
@@ -111,14 +111,14 @@ interceptors: {
 ## Error handling
 
 ```ts
-import { isKibinError } from '@kibinrpc/client'
+import { isKibinError } from "@kibinrpc/client"
 
 try {
-  await client.user.getUser('999')
+  await client.user.getUser("999")
 } catch (err) {
   if (isKibinError(err)) {
-    console.log(err.code)    // e.g. 'NOT_FOUND'
-    console.log(err.message) // e.g. 'User not found'
+    console.log(err.code)    // e.g. "NOT_FOUND"
+    console.log(err.message) // e.g. "User not found"
   }
 }
 ```
@@ -138,9 +138,9 @@ try {
 Returns a typed proxy. Every namespace from your router becomes a property, every registered action becomes an async method.
 
 ```ts
-const client = createKibinClient<AppRouter>({ baseUrl: '/api/rpc' })
+const client = createKibinClient<AppRouter>({ baseUrl: "/api/rpc" })
 
-client.user.getUser('1')        // Promise<User>
+client.user.getUser("1")        // Promise<User>
 client.post.listPosts()         // Promise<Post[]>
 ```
 
@@ -149,7 +149,7 @@ client.post.listPosts()         // Promise<Post[]>
 Type guard for `KibinError`:
 
 ```ts
-import { isKibinError, KibinError } from '@kibinrpc/client'
+import { isKibinError, KibinError } from "@kibinrpc/client"
 
 isKibinError(err) // err is KibinError
 err.code          // string
@@ -167,5 +167,5 @@ import type {
   ResponseCtx,
   ErrorCtx,
   RetryConfig,
-} from '@kibinrpc/client'
+} from "@kibinrpc/client"
 ```

@@ -11,13 +11,13 @@ npm install @kibinrpc/server
 ## Quick start
 
 ```ts
-import { ServerAction, defineActions, createRouter, KibinError } from '@kibinrpc/server'
+import { ServerAction, defineActions, createRouter, KibinError } from "@kibinrpc/server"
 
 class UserActions {
   @ServerAction()
   async getUser(id: string) {
     const user = await db.users.find(id)
-    if (!user) throw new KibinError('NOT_FOUND', 'User not found')
+    if (!user) throw new KibinError("NOT_FOUND", "User not found")
     return user
   }
 }
@@ -40,7 +40,7 @@ Mount on any framework that supports the Web `Request`/`Response` API:
 
 ```ts
 // Hono
-app.post('/api/rpc', (c) => router.handler(c.req.raw))
+app.post("/api/rpc", (c) => router.handler(c.req.raw))
 
 // Next.js App Router
 export const POST = router.handler
@@ -55,7 +55,7 @@ Only explicitly registered functions are callable. Everything else is rejected w
 ### Class decorator
 
 ```ts
-import { ServerAction } from '@kibinrpc/server'
+import { ServerAction } from "@kibinrpc/server"
 
 class UserActions {
   @ServerAction()
@@ -69,7 +69,7 @@ class UserActions {
 ### Functional
 
 ```ts
-import { defineActions, serverAction } from '@kibinrpc/server'
+import { defineActions, serverAction } from "@kibinrpc/server"
 
 // Register a whole namespace at once
 const postActions = defineActions({
@@ -88,8 +88,8 @@ Interceptors run for every call — including each item inside a batched request
 ```ts
 const router = createRouter({ user, post }, {
   beforeAction({ namespace, method, args, request }) {
-    const token = request.headers.get('Authorization')
-    if (!token) throw new KibinError('UNAUTHORIZED', 'Missing token')
+    const token = request.headers.get("Authorization")
+    if (!token) throw new KibinError("UNAUTHORIZED", "Missing token")
   },
 
   afterAction({ namespace, method, result }) {
@@ -107,11 +107,11 @@ const router = createRouter({ user, post }, {
 Throw `KibinError` to send a structured error to the client:
 
 ```ts
-import { KibinError } from '@kibinrpc/server'
+import { KibinError } from "@kibinrpc/server"
 
-throw new KibinError('NOT_FOUND', 'User not found')
-throw new KibinError('UNAUTHORIZED', 'Invalid token')
-throw new KibinError('BAD_REQUEST', 'Invalid input')
+throw new KibinError("NOT_FOUND", "User not found")
+throw new KibinError("UNAUTHORIZED", "Invalid token")
+throw new KibinError("BAD_REQUEST", "Invalid input")
 ```
 
 Any other thrown error becomes `{ code: 'INTERNAL_ERROR' }` — the original message is not leaked.
@@ -157,5 +157,5 @@ import type {
   RpcRequest,
   RpcResponse,
   RpcBatchItemResponse,
-} from '@kibinrpc/server'
+} from "@kibinrpc/server"
 ```
