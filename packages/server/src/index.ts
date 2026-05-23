@@ -7,6 +7,7 @@ export type {
 	ActionErrorCtx,
 	AfterActionCtx,
 	RouterInterceptors,
+	RpcBatchItemResponse,
 	RpcRequest,
 	RpcResponse,
 } from './types.js';

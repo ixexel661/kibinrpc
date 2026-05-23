@@ -10,13 +10,9 @@ type ServiceClient<T> = {
 
 type ExtractServices<T> = T extends { services: infer S } ? S : never;
 
-export type BatchFn = <T extends Array<() => Promise<unknown>>>(
-	thunks: [...T],
-) => Promise<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }>;
-
 export type KibinClient<Router> = {
 	[K in keyof ExtractServices<Router>]: ServiceClient<ExtractServices<Router>[K]>;
-} & { $batch: BatchFn };
+};
 
 export interface RequestCtx {
 	namespace: string;
@@ -47,8 +43,6 @@ export interface RetryConfig {
 
 export interface KibinClientConfig {
 	baseUrl: string;
-	/** Batch endpoint URL. Default: `${baseUrl}/batch` */
-	batchUrl?: string;
 	headers?: Record<string, string>;
 	retry?: RetryConfig;
 	interceptors?: ClientInterceptors;

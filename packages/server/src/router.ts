@@ -1,10 +1,10 @@
 import { KibinError } from './errors.js';
 import { getRegisteredActions, isBrandedAction } from './registry.js';
-import type { RouterInterceptors, RpcRequest, RpcResponse } from './types.js';
+import type { RouterInterceptors, RpcBatchItemResponse, RpcRequest, RpcResponse } from './types.js';
 
 type Services = Record<string, object>;
 
-function jsonResponse(body: RpcResponse | RpcResponse[], status: number): Response {
+function jsonResponse(body: RpcResponse | RpcBatchItemResponse[], status: number): Response {
 	return new Response(JSON.stringify(body), {
 		status,
 		headers: { 'Content-Type': 'application/json' },
@@ -76,30 +76,28 @@ async function executeRpcCall(
 
 export function createRouter<T extends Services>(services: T, interceptors?: RouterInterceptors) {
 	async function handler(request: Request): Promise<Response> {
-		let body: RpcRequest;
+		let body: RpcRequest | RpcRequest[];
 		try {
-			body = (await request.json()) as RpcRequest;
+			body = (await request.json()) as RpcRequest | RpcRequest[];
 		} catch {
 			return jsonResponse({ error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }, 400);
+		}
+
+		if (Array.isArray(body)) {
+			const results = await Promise.all(
+				body.map((b) => executeRpcCall(b, request, services, interceptors)),
+			);
+			const responses: RpcBatchItemResponse[] = results.map((r) => ({
+				...r,
+				status: statusFromResponse(r),
+			}));
+			const httpStatus = responses.every((r) => r.status === 200) ? 200 : 207;
+			return jsonResponse(responses, httpStatus);
 		}
 
 		const result = await executeRpcCall(body, request, services, interceptors);
 		return jsonResponse(result, statusFromResponse(result));
 	}
 
-	async function batchHandler(request: Request): Promise<Response> {
-		let bodies: RpcRequest[];
-		try {
-			bodies = (await request.json()) as RpcRequest[];
-		} catch {
-			return jsonResponse({ error: { code: 'BAD_REQUEST', message: 'Invalid JSON body' } }, 400);
-		}
-
-		const results = await Promise.all(
-			bodies.map((body) => executeRpcCall(body, request, services, interceptors)),
-		);
-		return jsonResponse(results, 200);
-	}
-
-	return { services, handler, batchHandler };
+	return { services, handler };
 }

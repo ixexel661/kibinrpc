@@ -9,6 +9,10 @@ export interface RpcResponse<T = unknown> {
 	error?: { code: string; message: string };
 }
 
+export interface RpcBatchItemResponse extends RpcResponse {
+	status: number;
+}
+
 export interface ActionCtx {
 	namespace: string;
 	method: string;

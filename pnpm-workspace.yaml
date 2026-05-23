@@ -6,6 +6,7 @@ packages:
 allowBuilds:
   esbuild: true
   lefthook: true
+  sharp: true
 
 minimumReleaseAgeExclude:
   - hono@4.12.22

@@ -7,7 +7,16 @@
 	},
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!node_modules", "!.agents", "!**/dist", "!**/*.d.ts", "!pnpm-lock.yaml"]
+		"includes": [
+			"**",
+			"!node_modules",
+			"!.agents",
+			"!**/dist",
+			"!**/.next",
+			"!**/.source",
+			"!**/*.d.ts",
+			"!pnpm-lock.yaml"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -55,6 +64,9 @@
 				"rules": {
 					"suspicious": {
 						"noConsole": "off"
+					},
+					"complexity": {
+						"noImportantStyles": "off"
 					}
 				}
 			}
